@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-// import logo from "../assets/Untitled_design__4_-removebg-preview.png";
-// import googleLogo from "../assets/icons8-google-logo-48.png";
-// import "./auth.css"; // add CSS file
+import './App.css'
+import googlelogo from './assets/google.png'
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,19 +10,15 @@ export default function AuthPage() {
 
       <div className="auth-card">
 
-        <div className="auth-header">
-          <img alt="CineVerse" className="auth-logo" />
-        </div>
-
         <div className="tabs">
            <button
-            className={`switch-btn ${isLogin ? "active" : ""}`}
+            className={`loginbtn switch-btn ${isLogin ? "active" : ""}`}
             onClick={() => setIsLogin(true)}
           >
             Login
           </button>
           <button
-            className={`switch-btn ${!isLogin ? "active" : ""}`}
+            className={`loginbtn switch-btn ${!isLogin ? "active" : ""}`}
             onClick={() => setIsLogin(false)}
           >
             Sign Up
@@ -60,13 +55,13 @@ export default function AuthPage() {
           </div>
         )}
 
-        <button className="main-btn">
+        <button className=" loginbtn main-btn">
           {isLogin ? "Sign in" : "Create account"}
         </button>
 
         {isLogin && (
-          <button className="google-btn">
-          <img  alt="Google Logo" className="google-icon" />
+          <button className="loginbtn google-btn">
+          <img src={googlelogo} alt="Google Logo" className="google-icon" />
           Sign in with Google
           </button>
 

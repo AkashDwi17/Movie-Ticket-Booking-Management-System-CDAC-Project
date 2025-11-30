@@ -87,9 +87,9 @@ export default function MovieDetails() {
 
               {/* Action Buttons */}
               <div className="flex gap-4">
-                <button className="bg-red-600 hover:bg-red-700 hover:cursor-pointer text-white px-8 py-3 rounded-lg font-semibold transition-colors">
+                <Link to="/Booking" className="bg-red-600 hover:bg-red-700 hover:cursor-pointer text-white px-8 py-3 rounded-lg font-semibold transition-colors">
                   Book Tickets
-                </button>
+                </Link>
                 
               </div>
             </div>

@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { Search, ChevronDown, Menu, X } from 'lucide-react';
 import logo from './assets/cineverse_logo1.png';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState('Yelahanka');
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+
+  const navigate = useNavigate();
 
   const cities = ['Yelahanka','Whitefield','Koramangala','MG Road','Indiranagar','Jayanagar','HSR Layout','Hebbal'];
 
@@ -75,7 +80,7 @@ export default function Navbar() {
             </div>
 
             {/* Sign In Button */}
-            <button className="bg-pink-600 hover:bg-pink-700 text-white px-4 md:px-6 py-2 rounded text-sm font-medium transition-colors">
+            <button  onClick={() => navigate('/login')} className="bg-pink-600 hover:bg-pink-700 text-white px-4 md:px-6 py-2 rounded text-sm font-medium transition-colors loginbtn">
               Sign in
             </button>
 
@@ -102,25 +107,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200">
-          <div className="px-4 py-4 space-y-3">
-            <button className="w-full text-left py-2 text-gray-700 hover:text-pink-600 transition-colors">
-              Movies
-            </button>
-            <button className="w-full text-left py-2 text-gray-700 hover:text-pink-600 transition-colors">
-              Events
-            </button>
-            <button className="w-full text-left py-2 text-gray-700 hover:text-pink-600 transition-colors">
-              Plays
-            </button>
-            <button className="w-full text-left py-2 text-gray-700 hover:text-pink-600 transition-colors">
-              Sports
-            </button>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

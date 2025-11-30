@@ -1,0 +1,141 @@
+.auth-container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.auth-card {
+  width: 380px;
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+/* LOGO + TITLE */
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.auth-logo {
+  height: 130px;
+  width: 250px;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 20px 0;
+}
+.tabs button {
+  background: none;
+  border: none;
+  margin: 10px 0 20px 0;
+  font-size: 18px;
+  padding-bottom: 4px;
+  color: #666;
+}
+.active-tab {
+  border-bottom: 2px solid #b71c1c;
+  color: #b71c1c;
+}
+
+/* FORM TEXT */
+.small-text {
+  font-size: 14px;
+  margin: 10px 0 20px 0;
+  color: #777;
+}
+.title-text {
+  font-size: 26px;
+  margin: 10px 0 20px 0;
+  color: #222;
+}
+
+/* INPUT BOXES */
+.input-box {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+.input-box:focus {
+  border-color: #b71c1c;
+  outline: none;
+}
+
+/* OPTIONS ROW */
+.options-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.remember {
+  font-size: 14px;
+  color: #555;
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: #b71c1c;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* BUTTONS */
+.main-btn {
+  width: 100%;
+  padding: 12px;
+  background: #b71c1c;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 15px;
+  margin-top: 10px;
+}
+.main-btn:hover {
+  background: #a01313;
+}
+
+.google-btn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.google-btn img {
+  height: 18px;
+}
+
+/* SWITCH LINK */
+.switch-text {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #555;
+}
+.switch-link {
+  color: #b71c1c;
+  cursor: pointer;
+  font-weight: 500;
+}
+.switch-link:hover {
+  text-decoration: underline;
+}
+
+.loginbtn{
+    cursor: pointer;
+}
