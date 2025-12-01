@@ -8,6 +8,7 @@ import MovieDetails from './MovieDetails.jsx'
 import Booking from './Booking.jsx'
 import Confirmation from './Confirmation.jsx'
 import NotFound from './Errorpage.jsx'
+import SeatLayout from './SeatLayout.jsx'
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
 
           <Route path='/MovieDetails' element={<MovieDetails />} />
           <Route path='/Booking' element={<Booking />} />
+          <Route path='/SeatLayout' element={<SeatLayout />} />
           <Route path='/Confirmation' element={<Confirmation />} />
           <Route path='*' element={<NotFound />} />
         </Routes>

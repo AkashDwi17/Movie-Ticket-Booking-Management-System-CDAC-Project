@@ -149,6 +149,7 @@ export default function TheatreServices() {
                     {t.shows.map((s, idx) => (
                       <button
                         key={idx}
+                        onClick={() => navigate('/SeatLayout')}
                         className={`px-4 py-2 rounded border text-sm font-medium cursor-pointer
                           ${s.status === "available" ? "border-green-600 text-green-700 hover:bg-green-50" : ""}
                           ${s.status === "fast" ? "border-amber-500 text-amber-700 hover:bg-amber-50" : ""}
