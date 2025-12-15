@@ -1,339 +1,248 @@
-import { useMemo, useState } from 'react'
-import mopedArt from './assets/moped.png'
-import './App.css'
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import api from "./apiClient";
 
-const showTimes = [
-  { id: '10:25', label: '10:25 AM', meta: 'Kannada • 2D', status: 'almost-full' },
-  { id: '13:40', label: '01:40 PM', meta: 'Kannada • 2D', status: 'available' },
-  { id: '19:00', label: '07:00 PM', meta: 'Kannada • 2D', status: 'fast-filling' },
-  { id: '22:10', label: '10:10 PM', meta: 'Kannada • 2D', status: 'available' }
-]
- 
-const createRow = (rowLabel, seatCount, price, options = {}) => {
-  const { sold = [], blocked = [], gapAfter = [] } = options
-  const soldSet = new Set(sold)
-  const blockedSet = new Set(blocked)
+const ROWS = ["A","B","C","D","E","F","G","H","J","K","L","M","N"];
+const SEATS_PER_ROW = 18;
 
-  const seats = []
-  for (let seatNumber = 1; seatNumber <= seatCount; seatNumber += 1) {
-    const id = `${rowLabel}${String(seatNumber).padStart(2, '0')}`
-    let status = 'available'
-    if (blockedSet.has(seatNumber)) {
-      status = 'blocked'
-    } else if (soldSet.has(seatNumber)) {
-      status = 'sold'
-    }
+const formatCurrency = (value) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 
-    seats.push({
-      id,
-      row: rowLabel,
-      number: seatNumber,
-      label: String(seatNumber).padStart(2, '0'),
-      status,
-      price
-    })
+// Fetch real userId when needed
+async function fetchUserIdFromBackend() {
+  try {
+    const username = localStorage.getItem("cineverse_username");
+    if (!username) return null;
 
-    if (gapAfter.includes(seatNumber)) {
-      seats.push({
-        id: `${id}-gap`,
-        type: 'gap'
-      })
-    }
-  }
-
-  return {
-    rowLabel,
-    seats
+    const res = await api.get(`/api/auth/user/${username}`);
+    return res.data.id;
+  } catch {
+    return null;
   }
 }
 
-const seatGroups = [
-  {
-    key: 'recliner',
-    label: '₹360 Recliner Rows',
-    price: 360,
-    statusTag: 'Filling fast',
-    rows: [createRow('N', 10, 360, { sold: [1, 2, 3, 4, 5, 6], blocked: [7, 8], gapAfter: [5] })]
-  },
-  {
-    key: 'prime',
-    label: '₹210 Prime Rows',
-    price: 210,
-    statusTag: 'Available',
-    rows: [
-      createRow('M', 18, 210, { sold: [7, 8, 9], gapAfter: [9] }),
-      createRow('L', 18, 210, { sold: [10, 11], gapAfter: [9] }),
-      createRow('K', 18, 210, { sold: [3, 4, 5, 6], gapAfter: [9] }),
-      createRow('J', 18, 210, { sold: [15, 16, 17], gapAfter: [9] }),
-      createRow('H', 18, 210, { gapAfter: [9] }),
-      createRow('G', 18, 210, { gapAfter: [9] })
-    ]
-  },
-  {
-    key: 'classic-plus',
-    label: '₹180 Classic Plus Rows',
-    price: 180,
-    statusTag: 'Available',
-    rows: [
-      createRow('F', 18, 180, { gapAfter: [9] }),
-      createRow('E', 18, 180, { sold: [1, 2], gapAfter: [9] }),
-      createRow('D', 18, 180, { gapAfter: [9] }),
-      createRow('C', 18, 180, { sold: [12, 13], gapAfter: [9] })
-    ]
-  },
-  {
-    key: 'classic',
-    label: '₹160 Classic Rows',
-    price: 160,
-    statusTag: 'Available',
-    rows: [
-      createRow('B', 18, 160, { sold: [1, 2], gapAfter: [9] }),
-      createRow('A', 18, 160, { sold: [15, 16, 17, 18], gapAfter: [9] })
-    ]
-  }
-]
+export default function SeatLayout() {
+  const { id: showIdParam } = useParams();
+  const showId = Number(showIdParam);
 
-const getTotalAvailableSeats = () =>
-  seatGroups.reduce(
-    (total, group) =>
-      total +
-      group.rows.reduce(
-        (rowTotal, row) =>
-          rowTotal +
-          row.seats.reduce((seatTotal, seat) => {
-            if (seat.type === 'gap') {
-              return seatTotal
-            }
-            return seat.status === 'available' ? seatTotal + 1 : seatTotal
-          }, 0),
-        0
-      ),
-    0
-  )
-
-const totalAvailableSeats = getTotalAvailableSeats()
-const quantityOptions = Array.from({ length: totalAvailableSeats }, (_, index) => index + 1)
-
-const formatCurrency = (value) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
-
-function SeatLayout() {
-  const [activeShow, setActiveShow] = useState(showTimes[0].id)
-  const [ticketCount, setTicketCount] = useState(2)
-  const [selectedSeats, setSelectedSeats] = useState([])
-  const [isTicketModalOpen, setTicketModalOpen] = useState(false)
-
+  const location = useLocation();
   const navigate = useNavigate();
+
+  const movie = location.state?.movie;
+  const show = location.state?.show;
+  const theatre = location.state?.theatre;
+
+  const [ticketCount] = useState(2);
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [seatStatus, setSeatStatus] = useState([]);
+
+  // Load seat availability
+  async function loadSeatStatus() {
+    try {
+      const res = await api.get(`/api/bookings/seat-status/${showId}`);
+      setSeatStatus(res.data);
+    } catch (err) {
+      console.error("Seat load error:", err);
+    }
+  }
+
+  useEffect(() => {
+    loadSeatStatus();
+  }, [showId]);
+
+  // Build seat rows
+  const seatRows = ROWS.map((row) => ({
+    rowLabel: row,
+    seats: Array.from({ length: SEATS_PER_ROW }, (_, index) => {
+      const num = String(index + 1).padStart(2, "0");
+      const id = `${row}${num}`;
+
+      const backendStatus =
+        seatStatus.find((s) => s.seat === id)?.status || "available";
+
+      return {
+        id,
+        label: num,
+        status: backendStatus,
+        price: show?.price || 200,
+      };
+    }),
+  }));
+
+  // Selected total
   const selectedTotal = useMemo(
     () =>
       selectedSeats.reduce(
         (acc, seat) => {
-          acc.amount += seat.price
-          acc.labels.push(seat.id)
-          return acc
+          acc.amount += seat.price;
+          acc.ids.push(seat.id);
+          return acc;
         },
-        { amount: 0, labels: [] }
+        { amount: 0, ids: [] }
       ),
     [selectedSeats]
-  )
+  );
 
+  // SELECT / UNSELECT seat (NO LOCK here)
   const handleSeatToggle = (seat) => {
-    if (seat.status !== 'available') {
-      return
-    }
+    if (seat.status !== "available") return;
 
     setSelectedSeats((prev) => {
-      const exists = prev.some((item) => item.id === seat.id)
-
-      if (exists) {
-        return prev.filter((item) => item.id !== seat.id)
+      if (prev.some((s) => s.id === seat.id)) {
+        return prev.filter((s) => s.id !== seat.id);
       }
+      if (prev.length >= ticketCount) return prev;
 
-      if (prev.length >= ticketCount) {
-        return prev
-      }
+      return [...prev, seat];
+    });
+  };
 
-      return [...prev, seat]
-    })
-  }
+  // PROCEED TO PAYMENT — LOCK HERE
+  const proceedToPayment = async () => {
+    if (!selectedSeats.length) return;
 
-  const resetSelection = () => setSelectedSeats([])
+    let userId = localStorage.getItem("cineverse_userId");
+    if (!userId) userId = await fetchUserIdFromBackend();
 
-  const handleTicketChange = (value) => {
-    setTicketCount(value)
-    setSelectedSeats((prev) => prev.slice(0, value))
-  }
+    const token = localStorage.getItem("cineverse_token");
 
-  const closeTicketModal = () => setTicketModalOpen(false)
+    try {
+      // ⭐ Lock all selected seats at once
+      await api.post(
+        "/api/bookings/lock",
+        {
+          userId,
+          showId,
+          seatNumbers: selectedSeats.map((s) => s.id),
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+    } catch (err) {
+      alert("Some seats were taken by others! Please reselect seats.");
+      await loadSeatStatus();
+      return;
+    }
+
+    // If locking succeeded → go to payment page
+    navigate("/payment", {
+      state: {
+        movie,
+        show,
+        theatre,
+        showId,
+        userId,
+        selectedSeats,
+        amount: selectedTotal.amount,
+      },
+    });
+  };
 
   return (
-    <div className="app-shell">
-      <header className="hero-card">
-        <div>
-          <p className="eyebrow">Maarutha • U/A</p>
-          <h1>Seat layout</h1>
-          <p className="subdued">PVR: Orion Mall, Dr Rajkumar Road • Fri, 21 Nov 2025 • IMAX 2D</p>
-        </div>
-        <div className="hero-meta">
-          <p>Kannada • 2D</p>
-          <span>102 min</span>
-        </div>
+    <div className="mx-auto max-w-[1100px] px-4 py-8 flex flex-col gap-6">
+
+      {/* HEADER */}
+      <header className="bg-gradient-to-br from-[#1f2538] to-[#2c3551] text-white p-8 rounded-3xl">
+        <p className="uppercase text-xs opacity-80">{movie?.genre} • U/A</p>
+        <h1 className="text-3xl font-semibold mt-1">{movie?.title}</h1>
+        <p className="opacity-70">
+          {theatre?.name} • {show?.showDate} • {show?.showTime}
+        </p>
       </header>
 
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Choose show time</h2>
-          <p>Select a slot that works best for you. Data pulled from BookMyShow.</p>
-        </div>
-        <div className="chip-grid">
-          {showTimes.map((slot) => (
-            <button
-              key={slot.id}
-              className={`chip ${activeShow === slot.id ? 'chip--active' : ''}`}
-              onClick={() => {
-                setActiveShow(slot.id)
-                resetSelection()
-              }}
-            >
-              <span>{slot.label}</span>
-              <small>{slot.meta}</small>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* MAIN */}
+      <section className="bg-white p-6 rounded-3xl shadow">
+        <h2 className="text-xl font-semibold">Select Seats</h2>
 
-      <div className="tickets-trigger">
-        <div>
-          <p className="tickets-trigger__eyebrow">Tickets</p>
-          <p className="tickets-trigger__title">Tap to adjust seat count</p>
-        </div>
-        <button className="ticket-button" onClick={() => setTicketModalOpen(true)}>
-          {ticketCount} Ticket{ticketCount > 1 ? 's' : ''}
-        </button>
-      </div>
-
-      <section className="panel">
-        <div className="panel-head">
-          <h2>Select seats</h2>
-          <p>Scroll to explore recliner, prime and classic sections. Data mirrored from the saved `BMS.html`.</p>
-        </div>
-
-        <div className="legend">
-          <span className="legend-item">
-            <span className="legend-dot legend-dot--available" />
-            Available
+        {/* Legend */}
+        <div className="flex gap-6 text-sm mt-6 text-gray-700">
+          <span className="flex items-center gap-2">
+            <span className="w-4 h-4 bg-green-200 border border-green-600 rounded" /> Available
           </span>
-          <span className="legend-item">
-            <span className="legend-dot legend-dot--selected" />
-            Selected
+          <span className="flex items-center gap-2">
+            <span className="w-4 h-4 bg-green-600 border-green-600 rounded" /> Selected
           </span>
-          <span className="legend-item">
-            <span className="legend-dot legend-dot--sold" />
-            Sold
+          <span className="flex items-center gap-2">
+            <span className="w-4 h-4 bg-red-200 border-red-500 rounded" /> Sold
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="w-4 h-4 bg-yellow-200 border-yellow-500 rounded" /> Locked
           </span>
         </div>
 
-        {seatGroups.map((group) => (
-          <div key={group.key} className="seat-group">
-            <div className="seat-group__header">
-              <div>
-                <p className="seat-group__title">{group.label}</p>
-                <p className="seat-group__meta">{group.statusTag}</p>
-              </div>
-              <span className="seat-group__price">{formatCurrency(group.price)}</span>
-            </div>
+        {/* Seat Rows */}
+        {seatRows.map((row) => (
+          <div key={row.rowLabel} className="mt-5 border rounded-xl p-4">
+            <p className="font-semibold text-gray-600">{row.rowLabel}</p>
 
-            <div className="seat-grid">
-              {group.rows.map((row) => (
-                <div key={row.rowLabel} className="seat-row">
-                  <div className="seat-row__label">{row.rowLabel}</div>
-                  <div className="seat-row__seats">
-                    {row.seats.map((seat) =>
-                      seat.type === 'gap' ? (
-                        <span key={seat.id} className="seat-gap" aria-hidden="true" />
-                      ) : (
-                        <button
-                          key={seat.id}
-                          className={`seat seat--${seat.status} ${
-                            selectedSeats.some((item) => item.id === seat.id) ? 'seat--selected' : ''
-                          }`}
-                          onClick={() => handleSeatToggle(seat)}
-                        >
-                          {seat.label}
-                        </button>
-                      )
-                    )}
-                  </div>
-                </div>
+            <div className="flex gap-2 flex-wrap mt-3">
+              {row.seats.map((seat) => (
+                <button
+                  key={seat.id}
+                  onClick={() => handleSeatToggle(seat)}
+                  className={`w-10 h-9 text-sm rounded-lg border font-semibold
+                    ${
+                      seat.status === "sold"
+                        ? "bg-red-200 border-red-500 text-red-700 cursor-not-allowed"
+                        : seat.status === "locked"
+                        ? "bg-yellow-200 border-yellow-500 text-yellow-700 cursor-not-allowed"
+                        : selectedSeats.some((s) => s.id === seat.id)
+                        ? "bg-green-600 border-green-600 text-white"
+                        : "bg-white border-gray-400 hover:border-green-600"
+                    }
+                  `}
+                >
+                  {seat.label}
+                </button>
               ))}
             </div>
           </div>
         ))}
 
-        <div className="screen">Screen this side</div>
+        {/* Screen Label */}
+        <div className="mt-10 mb-6 flex justify-center">
+          <div className="
+            w-2/3 h-6 
+            bg-gradient-to-b from-gray-300 to-white
+            rounded-b-full shadow-lg
+            flex items-center justify-center
+            text-gray-700 font-semibold text-sm
+          ">
+            SCREEN THIS SIDE
+          </div>
+        </div>
       </section>
 
-      <section className="panel summary">
+      {/* FOOTER */}
+      <section className="bg-white rounded-3xl p-7 shadow flex items-center justify-between">
         <div>
-          <p className="summary__title">
-            {selectedSeats.length ? `${selectedSeats.length} seat${selectedSeats.length > 1 ? 's' : ''} selected` : 'Waiting for your selection'}
+          <p className="text-lg font-semibold">
+            {selectedSeats.length
+              ? `${selectedSeats.length} seat(s) selected`
+              : "No seats selected"}
           </p>
-          <p className="summary__subtitle">
-            {selectedSeats.length ? selectedTotal.labels.join(', ') : `Pick up to ${ticketCount} seat${ticketCount > 1 ? 's' : ''}.`}
+          <p className="text-gray-600">
+            {selectedSeats.length ? selectedTotal.ids.join(", ") : "Select seats to continue"}
           </p>
         </div>
-        <div className="summary__cta">
-          <div className="summary__price">{selectedTotal.amount ? formatCurrency(selectedTotal.amount) : formatCurrency(0)}</div>
-          <button className="cta" disabled={!selectedSeats.length} onClick={()=> navigate('/Confirmation')}>
-            Pay {selectedTotal.amount ? formatCurrency(selectedTotal.amount) : formatCurrency(0)}
+
+        <div className="flex items-center gap-4">
+          <div className="text-2xl font-bold">{formatCurrency(selectedTotal.amount)}</div>
+
+          <button
+            disabled={!selectedSeats.length}
+            onClick={proceedToPayment}
+            className="px-6 py-3 bg-[#ff4d5a] text-white rounded-full font-semibold disabled:opacity-40"
+          >
+            Proceed to Pay
           </button>
         </div>
       </section>
-
-      {isTicketModalOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="ticket-modal">
-            <button className="modal-close" aria-label="Close" onClick={closeTicketModal}>
-              ×
-            </button>
-            <div className="modal-header">
-              <h3>How many seats?</h3>
-              <div className="modal-illustration">
-                <img src={mopedArt} alt="Illustration of a moped" />
-              </div>
-            </div>
-            <div className="modal-quantity">
-              {quantityOptions.map((value) => (
-                <button
-                  key={value}
-                  className={`quantity-chip ${ticketCount === value ? 'quantity-chip--active' : ''}`}
-                  onClick={() => handleTicketChange(value)}
-                >
-                  {value}
-                </button>
-              ))}
-            </div>
-            <div className="category-pills">
-              {seatGroups.map((group) => (
-                <div key={group.key} className="category-pill">
-                  <p className="category-pill__label">{group.label}</p>
-                  <p className="category-pill__price">{formatCurrency(group.price)}</p>
-                  <p className={`category-pill__status ${group.statusTag.toLowerCase().includes('fast') ? 'status-warn' : 'status-safe'}`}>
-                    {group.statusTag}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <div className="modal-footer">
-              <button className="cta" onClick={closeTicketModal}>
-                Select Seats
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  )
+  );
 }
-
-export default SeatLayout;
